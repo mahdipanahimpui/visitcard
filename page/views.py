@@ -102,12 +102,9 @@ class PageUpdateView(generics.UpdateAPIView):
     def get_object(self):
         obj = super().get_object()
 
-        print('#'*90)
-        print(self.request.user) # TODO: checking the request.user value
-
-        if self.request.user != obj.user:
-                raise PermissionDenied('just owner has permission.')
-        return obj
+        # if self.request.user != obj.user:
+        #         raise PermissionDenied('just owner has permission.')
+        # return obj
 
 
 # ---------------------------------------------------------------------------------
