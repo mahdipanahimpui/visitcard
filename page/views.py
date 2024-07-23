@@ -8,7 +8,9 @@ from rest_framework.exceptions import PermissionDenied
 
 from page.models import(
     Page,
-    Image
+    Image,
+    Comminucation,
+    Address
 )
 
 from page.paginations import(
@@ -17,11 +19,12 @@ from page.paginations import(
 
 from .serializers import(
     PageRetrieveSerializer,
-    PageUpdateDestroySerializer,
-    PageCreateSerializer, 
+    PageCreateUpdateDestroySerializer,
     PageListSerializer,
 
-    ImageSerializer
+    ImageSerializer,
+    ComminucationSerializer,
+    AddressSerializer
 )
 
 
@@ -66,7 +69,7 @@ class PageRetrieveView(generics.RetrieveAPIView):
 
 # ---------------------------------------------------------------------------------
 class PageCreateView(generics.CreateAPIView):
-    serializer_class = PageCreateSerializer
+    serializer_class = PageCreateUpdateDestroySerializer
     queryset = Page.objects.all()
 
 
@@ -75,28 +78,32 @@ class PageListView(generics.ListAPIView):
     serializer_class = PageListSerializer
     queryset = Page.objects.all()
 
-    def get_object(self):
-        obj = super().get_object()
+    # def get(self):
+    #     obj = super().get_object()
 
-        print('#'*90)
-        print(self.request.user) # TODO: checking the request.user value
+    #     print('#'*90)
+    #     print(self.request.user) # TODO: checking the request.user value
 
-        if not obj.publish == 'private':
-            raise PermissionDenied('the page is private.')
+    #     if not obj.publish == 'private':
+    #         raise PermissionDenied('the page is private.')
         
-        if not obj.is_active_by_user:
-            raise PermissionDenied('the page is deactivated by page owner.')
+    #     if not obj.is_active_by_user:
+    #         raise PermissionDenied('the page is deactivated by page owner.')
         
-        if not obj.is_active_by_admin:
-            raise PermissionDenied('the page is deactivated by superadmin.')
+    #     if not obj.is_active_by_admin:
+    #         raise PermissionDenied('the page is deactivated by superadmin.')
         
-        return obj
+    #     return obj
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        queryset = queryset.filter(publish='public', is_active_by_user=True, is_active_by_admin=True)
+        return queryset
 
 
 # ---------------------------------------------------------------------------------
 class PageUpdateView(generics.UpdateAPIView):
-    pagination_class = PagePagination
-    serializer_class = PageUpdateDestroySerializer
+    serializer_class = PageCreateUpdateDestroySerializer
     queryset = Page.objects.all()
 
     def get_object(self):
@@ -104,12 +111,12 @@ class PageUpdateView(generics.UpdateAPIView):
 
         # if self.request.user != obj.user:
         #         raise PermissionDenied('just owner has permission.')
-        # return obj
+        return obj
 
 
 # ---------------------------------------------------------------------------------
 class PageDestroyView(generics.DestroyAPIView):
-    serializer_class = PageUpdateDestroySerializer
+    serializer_class = PageCreateUpdateDestroySerializer
     queryset = Page.objects.all()
 
     def get_object(self):
@@ -118,8 +125,8 @@ class PageDestroyView(generics.DestroyAPIView):
         print('#'*90)
         print(self.request.user) # TODO: checking the request.user value
 
-        if self.request.user != obj.user:
-                raise PermissionDenied('just owner has permission.')
+        # if self.request.user != obj.user:
+        #         raise PermissionDenied('just owner has permission.')
         return obj
 
 
@@ -139,7 +146,7 @@ class ImageCreateListView(generics.ListCreateAPIView):
         return queryset
 
     
-
+ # ------------------------------------------------------------------------------------
 class ImageRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ImageSerializer
     queryset = Image.objects.all()
@@ -153,6 +160,70 @@ class ImageRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
             raise NotFound(f'image with id: {image_id} not found')
 
         return obj
+    
+# ----------------------------------------------------------------------------------
+class ComminucationCreateListView(generics.ListCreateAPIView):
+    serializer_class = ComminucationSerializer
+    queryset = Address.objects.all()
+
+
+    def get_queryset(self):
+        page_id = self.kwargs.get('page_id', None)
+
+        if (page_id is not None) and Page.objects.filter(id=page_id).exists():
+            queryset = Comminucation.objects.select_related('page').filter(page__id=page_id)
+        else:  
+            raise NotFound(f'page with id: {page_id} not found')
+        return queryset
+    
+
+ # ------------------------------------------------------------------------------------
+class ComminucationRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = ComminucationSerializer
+    queryset = Comminucation.objects.all()
+
+    def get_object(self):
+        comminucation_id = self.kwargs.get('comminucation_id', None)
+
+        if comminucation_id is not None:
+            obj = get_object_or_404(Comminucation, id=comminucation_id)
+        else:
+            raise NotFound(f'comminucation with id: {comminucation_id} not found')
+
+        return obj
+    
+
+# ----------------------------------------------------------------------------------
+class AddressCreateListView(generics.ListCreateAPIView):
+    serializer_class = AddressSerializer
+    queryset = Address.objects.all()
+
+
+    def get_queryset(self):
+        page_id = self.kwargs.get('page_id', None)
+
+        if (page_id is not None) and Page.objects.filter(id=page_id).exists():
+            queryset = Address.objects.select_related('page').filter(page__id=page_id)
+        else:  
+            raise NotFound(f'page with id: {page_id} not found')
+        return queryset
+    
+
+ # ------------------------------------------------------------------------------------
+class AddressRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = AddressSerializer
+    queryset = Address.objects.all()
+
+    def get_object(self):
+        address_id = self.kwargs.get('address_id', None)
+
+        if address_id is not None:
+            obj = get_object_or_404(Address, id=address_id)
+        else:
+            raise NotFound(f'address_id with id: {address_id} not found')
+
+        return obj
+
 
 
 
