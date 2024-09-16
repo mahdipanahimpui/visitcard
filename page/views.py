@@ -1,5 +1,5 @@
 from django.shortcuts import render
-
+from django.utils import timezone
 # Create your views here.
 from rest_framework import generics, mixins
 from rest_framework.generics import get_object_or_404, GenericAPIView
@@ -10,7 +10,8 @@ from page.models import(
     Page,
     Image,
     Comminucation,
-    Address
+    Address, 
+    Location
 )
 
 from page.paginations import(
@@ -24,7 +25,8 @@ from .serializers import(
 
     ImageSerializer,
     ComminucationSerializer,
-    AddressSerializer
+    AddressSerializer,
+    LocationSerializer
 )
 
 
@@ -55,15 +57,21 @@ class PageRetrieveView(generics.RetrieveAPIView):
     def get_object(self):
         obj = super().get_object()
 
-        print('#'*90)
-        print(self.request.user) # TODO: checking the request.user value
-
         if self.request.user != obj.user:
-            print(obj.is_active_by_user)
+
             if not obj.is_active_by_user:
                 raise PermissionDenied('the page is deactivated by page owner')
+            
             if not obj.is_active_by_admin:
                 raise PermissionDenied('the page is deactivated by superadmin')
+            
+            print('@'*100)
+            print('expire_datetme', obj.expire_datetime)
+            print('now:', timezone.now())
+
+            if not obj.expire_datetime <= timezone.now():
+                raise PermissionDenied('the page is expired, charge it')
+
         return obj
     
 
@@ -74,7 +82,7 @@ class PageCreateView(generics.CreateAPIView):
 
 
 # ---------------------------------------------------------------------------------
-class PageListView(generics.ListAPIView):
+class PageListView(Filtration, generics.ListAPIView):
     serializer_class = PageListSerializer
     queryset = Page.objects.all()
 
@@ -94,10 +102,12 @@ class PageListView(generics.ListAPIView):
     #         raise PermissionDenied('the page is deactivated by superadmin.')
         
     #     return obj
+
     
     def get_queryset(self):
         queryset = super().get_queryset()
-        queryset = queryset.filter(publish='public', is_active_by_user=True, is_active_by_admin=True)
+        now = timezone.now()
+        queryset = queryset.filter(publish='public', is_active_by_user=True, is_active_by_admin=True, expire_datetime__lte=now)
         return queryset
 
 
@@ -225,6 +235,35 @@ class AddressRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         return obj
 
 
+# ----------------------------------------------------------------------------------
+class LocationCreateListView(generics.ListCreateAPIView):
+    serializer_class = LocationSerializer
+    queryset = Address.objects.all()
 
+
+    def get_queryset(self):
+        page_id = self.kwargs.get('page_id', None)
+
+        if (page_id is not None) and Page.objects.filter(id=page_id).exists():
+            queryset = Location.objects.select_related('page').filter(page__id=page_id)
+        else:  
+            raise NotFound(f'page with id: {page_id} not found')
+        return queryset
+    
+
+ # ------------------------------------------------------------------------------------
+class LocationRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = LocationSerializer
+    queryset = Location.objects.all()
+
+    def get_object(self):
+        location_id = self.kwargs.get('location_id', None)
+
+        if location_id is not None:
+            obj = get_object_or_404(Location, id=location_id)
+        else:
+            raise NotFound(f'location_id with id: {location_id} not found')
+
+        return obj
 
 

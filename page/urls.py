@@ -17,8 +17,8 @@ urlpatterns = [
     path('<int:page_id>/comminucations/', views.ComminucationCreateListView.as_view()),
     path('<int:page_id>/comminucations/<int:comminucation_id>', views.ComminucationRetrieveUpdateDestroyView.as_view()),
 
-    # path('<int:page_id>/locations/', views.LocationCreateListView.as_view()),
-    # path('<int:page_id>/locations/<int:location_id>', views.LocationRetrieveUpdateDestroyView.as_view()),
+    path('<int:page_id>/locations/', views.LocationCreateListView.as_view()),
+    path('<int:page_id>/locations/<int:location_id>', views.LocationRetrieveUpdateDestroyView.as_view()),
 
     path('<int:page_id>/addresses/', views.AddressCreateListView.as_view()),
     path('<int:page_id>/addresses/<int:address_id>', views.AddressRetrieveUpdateDestroyView.as_view()),

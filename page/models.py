@@ -1,11 +1,13 @@
 from django.db import models
+from django.utils import timezone
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator, FileExtensionValidator
 from functools import partial
 from django.utils.text import slugify 
-
 from django.core.exceptions import ValidationError
+from datetime import timedelta
 
+FREE_TIME_DELTA = 7
 
 # -------------------------------------- FUNCTIONS ---------------------------------------------
 def validate_max_file_size(value, max_size):
@@ -55,9 +57,9 @@ class Page(models.Model):
     subject = models.CharField(max_length=128, blank=True, null=True)
     description = models.TextField(max_length=1024)
 
-    max_address_count = models.SmallIntegerField(default=1, validators=[MinValueValidator(0), MaxValueValidator(20)])
+    max_address_count = models.SmallIntegerField(default=10, validators=[MinValueValidator(0), MaxValueValidator(20)])
     max_image_count = models.SmallIntegerField(default=3,  validators=[MinValueValidator(0), MaxValueValidator(20)])
-    max_comminucation_count = models.PositiveSmallIntegerField(default=10, validators=[MinValueValidator(20)])
+    max_comminucation_count = models.PositiveSmallIntegerField(default=1, validators=[MinValueValidator(20)])
 
     publish = models.CharField(default='public', max_length=30, choices=PUBLISH_CHOICES)
     slug = models.SlugField(default="", null=True, blank=True)
@@ -65,13 +67,19 @@ class Page(models.Model):
     is_active_by_user = models.BooleanField(default=True)
     is_premium = models.BooleanField(default=False)
 
+    expire_datetime = models.DateTimeField(auto_now_add=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
 
     def save(self, *args, **kwargs):
         self.slug = slugify(self.title)
+        if self._state.adding:
+            self.expire_datetime = timezone.now() + timedelta(days=FREE_TIME_DELTA)
         super(Page, self).save(*args, **kwargs)
+
+    
 
 
 class Image(models.Model):

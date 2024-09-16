@@ -8,7 +8,7 @@ from page.models import (
     Image,
     Comminucation,
     Address,
-
+    Location
 )
 
 
@@ -37,12 +37,13 @@ class PageRetrieveSerializer(serializers.ModelSerializer):
             'is_active_by_admin',
             'is_active_by_user',
             'is_premium',
+            'expire_datetime',
             'created_at',
             'updated_at'
         ]
 
         read_only_fields = [*base_read_only_fields, 'publish', 'slug', 'is_active_by_admin',
-                            'is_active_by_user',
+                            'is_active_by_user', 'expire_datetime',
                             'is_premium', 'max_address_count', 
                             'max_image_count', 'max_comminucation_count']
         
@@ -69,11 +70,13 @@ class PageCreateUpdateDestroySerializer(serializers.ModelSerializer):
             'is_active_by_admin',
             'is_active_by_user',
             'is_premium',
+            'expire_datetime',
             'created_at',
             'updated_at',
         ]
 
-        read_only_fields = [*base_read_only_fields, 'slug']
+        read_only_fields = [*base_read_only_fields, 'slug', 'max_address_count', 'expire_datetime'
+                            'max_image_count', 'max_comminucation_count', 'is_active_by_admin', 'is_premium']
 
 
 # -------------------------------------------------------------------------------
@@ -192,7 +195,6 @@ class AddressSerializer(serializers.ModelSerializer):
         read_only_fields = [*base_read_only_fields]
 
 
-
     def validate(self, attrs):
         validation = super().validate(attrs)
         page = attrs.get('page', None)
@@ -211,6 +213,32 @@ class AddressSerializer(serializers.ModelSerializer):
         return validation
     
 
+
+# ---------------------------------------------------------------------------------
+class LocationSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model : Location
+        fields = '__all__'
+        read_only_fields = [*base_read_only_fields]
+
+
+    def validate(self, attrs):
+        validation = super().validate(attrs)
+        page = attrs.get('page', None)
+
+        if page:
+
+            max_location_count = page.max_location_count
+            currnet_location_count = Location.objects.filter(page=page).count()
+
+            if self.context['request'].method == 'PUT':
+                currnet_location_count += 1
+
+            if not currnet_location_count < max_location_count:
+                raise ValidationError(f'max_location_count: {max_location_count}, currnet_location_count: {currnet_location_count}')
+            
+        return validation
     
 
         
